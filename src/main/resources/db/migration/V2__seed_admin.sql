@@ -1,0 +1,1 @@
+-- Usuário administrador criado automaticamente pela aplicação

@@ -1,0 +1,8 @@
+info:
+  app:
+    environment: staging
+
+logging:
+  level:
+    root: INFO
+    com.ecotrack: INFO

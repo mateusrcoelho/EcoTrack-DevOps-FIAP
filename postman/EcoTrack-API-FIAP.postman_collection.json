@@ -1,0 +1,259 @@
+{
+  "info": {
+    "name": "EcoTrack API - FIAP ESG",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8080"
+    },
+    {
+      "key": "token",
+      "value": ""
+    }
+  ],
+  "item": [
+    {
+      "name": "Auth - Login",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{baseUrl}}/auth/login",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"email\": \"admin@ecotrack.com\",\n  \"senha\": \"admin123\"\n}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "if (pm.response.code === 200) {",
+              "    const json = pm.response.json();",
+              "    pm.collectionVariables.set('token', json.token);",
+              "}"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Auth - Register",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{baseUrl}}/auth/register",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"nome\": \"Mateus Reis\",\n  \"email\": \"mateus@ecotrack.com\",\n  \"senha\": \"123456\",\n  \"role\": \"USER\"\n}"
+        }
+      }
+    },
+    {
+      "name": "Criar Resíduo",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}"
+          }
+        ],
+        "url": "{{baseUrl}}/residuos",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"tipoResiduo\": \"Pl\\u00e1stico\",\n  \"pesoKg\": 25.5,\n  \"dataRegistro\": \"2026-05-20\",\n  \"statusColeta\": \"PENDENTE\"\n}"
+        }
+      }
+    },
+    {
+      "name": "Listar Resíduos",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}"
+          }
+        ],
+        "url": "{{baseUrl}}/residuos"
+      }
+    },
+    {
+      "name": "Buscar Resíduo por ID",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}"
+          }
+        ],
+        "url": "{{baseUrl}}/residuos/1"
+      }
+    },
+    {
+      "name": "Atualizar Resíduo",
+      "request": {
+        "method": "PUT",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}"
+          }
+        ],
+        "url": "{{baseUrl}}/residuos/1",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"tipoResiduo\": \"Papel\",\n  \"pesoKg\": 30.0,\n  \"dataRegistro\": \"2026-05-20\",\n  \"statusColeta\": \"AGENDADA\"\n}"
+        }
+      }
+    },
+    {
+      "name": "Criar Coleta",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}"
+          }
+        ],
+        "url": "{{baseUrl}}/coletas",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"dataColeta\": \"2026-05-25\",\n  \"empresaResponsavel\": \"Cooperativa Recicla Verde\",\n  \"status\": \"AGENDADA\",\n  \"residuoId\": 1\n}"
+        }
+      }
+    },
+    {
+      "name": "Listar Coletas",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}"
+          }
+        ],
+        "url": "{{baseUrl}}/coletas"
+      }
+    },
+    {
+      "name": "Indicadores ESG",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}"
+          }
+        ],
+        "url": "{{baseUrl}}/indicadores"
+      }
+    },
+    {
+      "name": "Gerar Relatório Ambiental",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}"
+          }
+        ],
+        "url": "{{baseUrl}}/relatorios/ambiental"
+      }
+    },
+    {
+      "name": "Residuos - Delete",
+      "request": {
+        "method": "DELETE",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}"
+          }
+        ],
+        "url": "{{baseUrl}}/residuos/1"
+      }
+    },
+    {
+      "name": "Coletas - Buscar Por ID",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}"
+          }
+        ],
+        "url": "{{baseUrl}}/coletas/1"
+      }
+    },
+    {
+      "name": "Coletas - Atualizar",
+      "request": {
+        "method": "PUT",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}"
+          }
+        ],
+        "url": "{{baseUrl}}/coletas/1",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"dataColeta\": \"2026-05-26\",\n  \"empresaResponsavel\": \"Cooperativa Recicla Verde\",\n  \"status\": \"COLETADA\",\n  \"residuoId\": 1\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "Coletas - Delete",
+      "request": {
+        "method": "DELETE",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}"
+          }
+        ],
+        "url": "{{baseUrl}}/coletas/1"
+      }
+    }
+  ]
+}

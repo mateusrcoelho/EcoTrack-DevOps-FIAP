@@ -1,0 +1,51 @@
+services:
+  oracle:
+    image: gvenzl/oracle-xe:21-slim
+    container_name: ecotrack-oracle-production
+    restart: unless-stopped
+    environment:
+      ORACLE_PASSWORD: ${ORACLE_PASSWORD}
+      APP_USER: ${DB_USER}
+      APP_USER_PASSWORD: ${DB_PASSWORD}
+    volumes:
+      - oracle-production-data:/opt/oracle/oradata
+    networks:
+      - ecotrack-production-network
+    healthcheck:
+      test: ["CMD", "healthcheck.sh"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+      start_period: 40s
+
+  app:
+    image: ${APP_IMAGE}
+    container_name: ecotrack-api-production
+    restart: unless-stopped
+    depends_on:
+      oracle:
+        condition: service_healthy
+    environment:
+      DB_URL: jdbc:oracle:thin:@oracle:1521/XEPDB1
+      DB_USER: ${DB_USER}
+      DB_PASSWORD: ${DB_PASSWORD}
+      JWT_SECRET: ${JWT_SECRET}
+      JWT_EXPIRATION_MS: ${JWT_EXPIRATION_MS:-86400000}
+      APP_ADMIN_ENABLED: ${APP_ADMIN_ENABLED:-true}
+      APP_ADMIN_NAME: ${APP_ADMIN_NAME:-Administrador}
+      APP_ADMIN_EMAIL: ${APP_ADMIN_EMAIL:-admin@ecotrack.com}
+      APP_ADMIN_PASSWORD: ${APP_ADMIN_PASSWORD}
+      SPRING_PROFILES_ACTIVE: production
+    ports:
+      - "8080:8080"
+    networks:
+      - ecotrack-production-network
+
+volumes:
+  oracle-production-data:
+    name: ecotrack-oracle-production-data
+
+networks:
+  ecotrack-production-network:
+    name: ecotrack-production-network
+    driver: bridge
