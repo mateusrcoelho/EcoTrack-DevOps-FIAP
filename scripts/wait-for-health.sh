@@ -6,15 +6,23 @@ MAX_ATTEMPTS="${2:-60}"
 SLEEP_SECONDS="${3:-10}"
 
 for attempt in $(seq 1 "$MAX_ATTEMPTS"); do
-  status="$(docker inspect --format='{{.State.Health.Status}}' "$CONTAINER_NAME" 2>/dev/null || true)"
+  container_status="$(docker inspect --format='{{.State.Status}}' "$CONTAINER_NAME" 2>/dev/null || true)"
+  health_status="$(docker inspect --format='{{if .State.Health}}{{.State.Health.Status}}{{end}}' "$CONTAINER_NAME" 2>/dev/null || true)"
 
-  if [[ "$status" == "healthy" ]]; then
+  if [[ "$health_status" == "healthy" ]]; then
     echo "Container $CONTAINER_NAME saudável."
     exit 0
   fi
 
-  if [[ "$status" == "unhealthy" ]]; then
+  if [[ "$health_status" == "unhealthy" ]]; then
     echo "Container $CONTAINER_NAME ficou unhealthy." >&2
+    docker logs --tail=120 "$CONTAINER_NAME" || true
+    exit 1
+  fi
+
+  if [[ "$container_status" == "exited" || "$container_status" == "dead" || "$container_status" == "restarting" ]]; then
+    echo "Container $CONTAINER_NAME está em estado '$container_status'." >&2
+    docker logs --tail=120 "$CONTAINER_NAME" || true
     exit 1
   fi
 
@@ -23,4 +31,5 @@ for attempt in $(seq 1 "$MAX_ATTEMPTS"); do
 done
 
 echo "Tempo limite excedido aguardando $CONTAINER_NAME." >&2
+docker logs --tail=120 "$CONTAINER_NAME" || true
 exit 1
