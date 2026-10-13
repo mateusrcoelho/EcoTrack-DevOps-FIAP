@@ -1,1 +1,216 @@
+name: EcoTrack CI/CD
 
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  build-and-test:
+    name: Build e testes
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configurar Java 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: maven
+
+      - name: Build e testes automatizados
+        run: mvn -B clean verify
+
+      - name: Publicar relatórios de testes
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: surefire-reports
+          path: target/surefire-reports/
+          if-no-files-found: warn
+          retention-days: 7
+
+  docker-image:
+    name: Build e publicação da imagem
+    if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
+    needs: build-and-test
+    runs-on: ubuntu-latest
+    outputs:
+      image: ${{ steps.image.outputs.image }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Login no GitHub Container Registry
+        run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
+
+      - name: Build e push da imagem Docker
+        id: image
+        shell: bash
+        run: |
+          IMAGE_NAME="ghcr.io/${GITHUB_REPOSITORY,,}"
+          IMAGE_SHA="$IMAGE_NAME:${GITHUB_SHA}"
+          docker build --tag "$IMAGE_SHA" --tag "$IMAGE_NAME:latest" .
+          docker push "$IMAGE_SHA"
+          docker push "$IMAGE_NAME:latest"
+          echo "image=$IMAGE_SHA" >> "$GITHUB_OUTPUT"
+
+  deploy-staging:
+    name: Deploy staging
+    if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
+    needs: docker-image
+    runs-on: ubuntu-latest
+    environment:
+      name: staging
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Login no GitHub Container Registry
+        run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
+
+      - name: Preparar configuração de staging
+        shell: bash
+        run: |
+          ORACLE_PASSWORD="$(openssl rand -hex 16)"
+          DB_PASSWORD="$(openssl rand -hex 16)"
+          JWT_SECRET="$(openssl rand -hex 48)"
+          ADMIN_PASSWORD="$(openssl rand -hex 16)"
+          cat > .env.staging <<EOF
+          APP_IMAGE=${{ needs.docker-image.outputs.image }}
+          ORACLE_PASSWORD=${ORACLE_PASSWORD}
+          DB_USER=ECOTRACK
+          DB_PASSWORD=${DB_PASSWORD}
+          JWT_SECRET=${JWT_SECRET}
+          JWT_EXPIRATION_MS=86400000
+          APP_ADMIN_ENABLED=true
+          APP_ADMIN_NAME=Administrador Staging
+          APP_ADMIN_EMAIL=admin.staging@ecotrack.local
+          APP_ADMIN_PASSWORD=${ADMIN_PASSWORD}
+          EOF
+
+      - name: Implantar ambiente de staging
+        run: |
+          docker compose -p ecotrack-staging -f deploy/docker-compose.staging.yml --env-file .env.staging pull
+          docker compose -p ecotrack-staging -f deploy/docker-compose.staging.yml --env-file .env.staging up -d --remove-orphans
+          bash scripts/wait-for-health.sh ecotrack-api-staging 60 10
+
+      - name: Smoke test de staging
+        shell: bash
+        run: |
+          mkdir -p docs/evidencias
+          curl --fail --silent --show-error http://localhost:8081/actuator/health | tee docs/evidencias/staging-health.json
+          echo
+          curl --fail --silent --show-error --output /dev/null http://localhost:8081/swagger-ui/index.html
+          docker compose -p ecotrack-staging -f deploy/docker-compose.staging.yml --env-file .env.staging ps | tee docs/evidencias/staging-containers.txt
+
+      - name: Capturar evidência visual de staging
+        run: |
+          npx --yes playwright@1.55.0 install --with-deps chromium
+          npx --yes playwright@1.55.0 screenshot --device="Desktop Chrome" --wait-for-timeout=3000 http://localhost:8081/swagger-ui/index.html docs/evidencias/04-staging-funcionando.png
+
+      - name: Publicar evidências de staging
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: evidencias-staging
+          path: |
+            docs/evidencias/04-staging-funcionando.png
+            docs/evidencias/staging-health.json
+            docs/evidencias/staging-containers.txt
+          if-no-files-found: warn
+          retention-days: 7
+
+      - name: Logs de staging em caso de falha
+        if: failure()
+        run: docker compose -p ecotrack-staging -f deploy/docker-compose.staging.yml --env-file .env.staging logs --tail=200
+
+      - name: Encerrar staging
+        if: always()
+        run: docker compose -p ecotrack-staging -f deploy/docker-compose.staging.yml --env-file .env.staging down -v --remove-orphans || true
+
+  deploy-production:
+    name: Deploy produção
+    if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
+    needs: [docker-image, deploy-staging]
+    runs-on: ubuntu-latest
+    environment:
+      name: production
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Login no GitHub Container Registry
+        run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
+
+      - name: Preparar configuração de produção
+        shell: bash
+        run: |
+          ORACLE_PASSWORD="$(openssl rand -hex 16)"
+          DB_PASSWORD="$(openssl rand -hex 16)"
+          JWT_SECRET="$(openssl rand -hex 48)"
+          ADMIN_PASSWORD="$(openssl rand -hex 16)"
+          cat > .env.production <<EOF
+          APP_IMAGE=${{ needs.docker-image.outputs.image }}
+          ORACLE_PASSWORD=${ORACLE_PASSWORD}
+          DB_USER=ECOTRACK
+          DB_PASSWORD=${DB_PASSWORD}
+          JWT_SECRET=${JWT_SECRET}
+          JWT_EXPIRATION_MS=86400000
+          APP_ADMIN_ENABLED=true
+          APP_ADMIN_NAME=Administrador Producao
+          APP_ADMIN_EMAIL=admin.production@ecotrack.local
+          APP_ADMIN_PASSWORD=${ADMIN_PASSWORD}
+          EOF
+
+      - name: Implantar ambiente de produção
+        run: |
+          docker compose -p ecotrack-production -f deploy/docker-compose.production.yml --env-file .env.production pull
+          docker compose -p ecotrack-production -f deploy/docker-compose.production.yml --env-file .env.production up -d --remove-orphans
+          bash scripts/wait-for-health.sh ecotrack-api-production 60 10
+
+      - name: Smoke test de produção
+        shell: bash
+        run: |
+          mkdir -p docs/evidencias
+          curl --fail --silent --show-error http://localhost:8080/actuator/health | tee docs/evidencias/production-health.json
+          echo
+          curl --fail --silent --show-error --output /dev/null http://localhost:8080/swagger-ui/index.html
+          docker compose -p ecotrack-production -f deploy/docker-compose.production.yml --env-file .env.production ps | tee docs/evidencias/production-containers.txt
+
+      - name: Capturar evidência visual de produção
+        run: |
+          npx --yes playwright@1.55.0 install --with-deps chromium
+          npx --yes playwright@1.55.0 screenshot --device="Desktop Chrome" --wait-for-timeout=3000 http://localhost:8080/swagger-ui/index.html docs/evidencias/06-production-funcionando.png
+
+      - name: Publicar evidências de produção
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: evidencias-production
+          path: |
+            docs/evidencias/06-production-funcionando.png
+            docs/evidencias/production-health.json
+            docs/evidencias/production-containers.txt
+          if-no-files-found: warn
+          retention-days: 7
+
+      - name: Logs de produção em caso de falha
+        if: failure()
+        run: docker compose -p ecotrack-production -f deploy/docker-compose.production.yml --env-file .env.production logs --tail=200
+
+      - name: Encerrar produção
+        if: always()
+        run: docker compose -p ecotrack-production -f deploy/docker-compose.production.yml --env-file .env.production down -v --remove-orphans || true
