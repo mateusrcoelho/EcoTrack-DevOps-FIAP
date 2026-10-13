@@ -1,0 +1,20 @@
+# Build
+/target/
+*.log
+
+# IDEs
+.idea/
+.vscode/
+*.iml
+.classpath
+.project
+.settings/
+
+# Environment
+.env
+.env.*
+!.env.example
+
+# Operating system
+.DS_Store
+Thumbs.db
