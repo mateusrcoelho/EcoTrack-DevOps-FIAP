@@ -83,8 +83,8 @@ jobs:
       - name: Preparar configuração de staging
         shell: bash
         run: |
-          ORACLE_PASSWORD="$(openssl rand -hex 16)"
-          DB_PASSWORD="$(openssl rand -hex 16)"
+          ORACLE_PASSWORD="$(openssl rand -hex 12)"
+          DB_PASSWORD="$(openssl rand -hex 12)"
           JWT_SECRET="$(openssl rand -hex 48)"
           ADMIN_PASSWORD="$(openssl rand -hex 16)"
           cat > .env.staging <<EOF
@@ -158,8 +158,8 @@ jobs:
       - name: Preparar configuração de produção
         shell: bash
         run: |
-          ORACLE_PASSWORD="$(openssl rand -hex 16)"
-          DB_PASSWORD="$(openssl rand -hex 16)"
+          ORACLE_PASSWORD="$(openssl rand -hex 12)"
+          DB_PASSWORD="$(openssl rand -hex 12)"
           JWT_SECRET="$(openssl rand -hex 48)"
           ADMIN_PASSWORD="$(openssl rand -hex 16)"
           cat > .env.production <<EOF
