@@ -167,8 +167,8 @@ public class ApiSteps {
         assertFalse(jwt.isBlank());
     }
 
-    @Então("o cálculo de CO2 evitado corresponde a {double} kg")
-    public void co2(double expected) { assertEquals(expected, last.jsonPath().getDouble("impactoCo2Kg"), 0.01); }
+    @Então("^o cálculo de CO2 evitado corresponde a ([0-9]+\\.[0-9]+) kg$")
+    public void co2(String expected) { assertEquals(Double.parseDouble(expected), last.jsonPath().getDouble("impactoCo2Kg"), 0.01); }
 
     @Então("a lista de resíduos segue o contrato JSON Schema")
     public void listaResiduos() {
