@@ -59,3 +59,14 @@ Os cenários de escrita criam registros no banco local de teste. Evite rodar con
 Para diagnóstico: `docker compose logs --tail=100 oracle app`.
 
 Os testes BDD são ativados **apenas** com o perfil Maven `bdd-api` para não interferir na suíte unitária e no pipeline existente.
+
+
+## Execução automatizada pelo GitHub Actions
+
+A branch `testes-automatizados-fiap` contém o workflow independente `.github/workflows/fiap-bdd.yml`. Ele é iniciado em cada push nessa branch e **não executa deploy** de staging ou produção.
+
+O workflow realiza: checkout, Java 21, build e testes unitários, Docker Compose com Oracle XE e aplicação, espera `/actuator/health` ficar disponível, executa a suíte BDD e publica o artefato `fiap-bdd-relatorios` com HTML/JSON/XML, relatórios e logs.
+
+Para acompanhar, abra [Actions da EcoTrack](https://github.com/mateusrcoelho/EcoTrack-DevOps-FIAP/actions), localize **FIAP BDD API - validação**, abra a execução da branch e baixe `fiap-bdd-relatorios` ao final. Capturas da tela da execução, do relatório HTML e do healthcheck devem ser anexadas ao PDF de entrega **somente após sucesso real**.
+
+A branch também possui um [pull request em rascunho](https://github.com/mateusrcoelho/EcoTrack-DevOps-FIAP/pull/1), que não deve ser mesclado até a validação dos testes.
