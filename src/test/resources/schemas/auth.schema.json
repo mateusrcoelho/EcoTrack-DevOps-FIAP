@@ -1,0 +1,28 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "required": [
+    "token",
+    "tipo",
+    "email",
+    "role"
+  ],
+  "properties": {
+    "token": {
+      "type": "string"
+    },
+    "tipo": {
+      "const": "Bearer"
+    },
+    "email": {
+      "type": "string"
+    },
+    "role": {
+      "enum": [
+        "USER",
+        "ADMIN"
+      ]
+    }
+  },
+  "additionalProperties": true
+}

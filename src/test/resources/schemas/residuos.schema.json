@@ -1,0 +1,37 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "array",
+  "items": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "type": "object",
+    "required": [
+      "id",
+      "tipoResiduo",
+      "pesoKg",
+      "dataRegistro",
+      "statusColeta",
+      "impactoCo2Kg"
+    ],
+    "properties": {
+      "id": {
+        "type": "integer"
+      },
+      "tipoResiduo": {
+        "type": "string"
+      },
+      "pesoKg": {
+        "type": "number"
+      },
+      "dataRegistro": {
+        "type": "string"
+      },
+      "statusColeta": {
+        "type": "string"
+      },
+      "impactoCo2Kg": {
+        "type": "number"
+      }
+    },
+    "additionalProperties": true
+  }
+}

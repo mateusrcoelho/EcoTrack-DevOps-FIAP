@@ -1,0 +1,25 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "required": [
+    "status",
+    "erro",
+    "mensagem",
+    "timestamp"
+  ],
+  "properties": {
+    "status": {
+      "type": "integer"
+    },
+    "erro": {
+      "type": "string"
+    },
+    "mensagem": {
+      "type": "string"
+    },
+    "timestamp": {
+      "type": "string"
+    }
+  },
+  "additionalProperties": true
+}
